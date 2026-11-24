@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_ff3d00c9_68fe_4064_94a8_405af18d9a32_Output_Variables_postPayload = Any
+

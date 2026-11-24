@@ -1,0 +1,162 @@
+#%RAML 1.0
+title: boa-loans-api
+#baseUri: https://www.boa.com/api
+version: 1.0.0
+protocols:
+  - HTTP
+  - HTTPS
+#raml reuability concepts includes types, traits, resourceTypes
+securitySchemes:
+  auth:
+    type: OAuth 2.0
+types:
+  inpSchema:
+    type: object
+    properties:
+          customer_id:
+            type: string
+          customer_fname:
+            type: string
+          customer_lname:
+            type: string
+          loan_type:
+            type: string
+          loan_amount:
+            type: number
+          tenure:
+            type: number
+          interest:    
+            type: number
+          email:
+            type: string
+            required: false
+    example:
+          {
+            "customer_id": "AADHAR_1234",
+            "customer_fname": "Aryakanthi",
+            "customer_lname": "Akash",
+            "loan_type": "GOLD",
+            "loan_amount": 500000,
+            "tenure": 60,
+            "interest": 8.5
+          }
+  successResp:
+    type: object
+    properties:
+              loan_id:
+                type: string
+              message:
+                type: string
+    example:
+              {
+                "loan_id": "GOLD_21334",
+                "message": "Gold Loan account created successfully"
+              }
+  clientF1:
+    type: object
+    properties:
+              Client Failures:
+                type: string
+    example:
+              {
+                "Client Failures": "BAD REQUEST!"
+              }
+  clientF2:
+    type: object
+    properties:
+              Client Failures:
+                type: string
+    example:
+              {
+                "Client Failures": "Resource Not found!"
+              }
+  clientF3:
+    type: object
+    properties:
+              Client Failures:
+                type: string
+    example:
+              {
+                "Client Failures": "Too many retries!"
+              }
+  serverF1:
+    type: object
+    properties:
+              Server Failures:
+                type: string
+    example:
+              {
+                "Server Failures": "Internal Server error!"
+              }
+  serverF2:
+    type: object
+    properties:
+              Server Failures:
+                type: string
+    example:
+              {
+                "Server Failures": "Server unavailable!"
+              }
+
+traits:
+  client-info:
+    headers:
+      x-correlation-id: 
+        type: string
+        example: b5a95a63.f190.4c91.880a.5b54512fa6b1
+      client-id:
+        type: string
+        example: boa1234
+      client-secret:
+        type: string
+        example: V7!qR2#$%nl
+
+/loans:
+  post:
+    is:
+      - client-info
+    securedBy:
+      - auth 
+    description: To create loan accounts for 4 types of loans
+    body:
+      application/json: 
+        type: inpSchema
+    responses:
+      201:
+        body:
+          application/json:
+            type: successResp
+      400:
+        body:
+          application/json:
+            type: clientF1
+      404:
+        body:
+          application/json:
+            type: clientF2
+
+      429:
+        body:
+          application/json:
+            type: clientF3
+      500:
+        body:
+          application/json:
+            type: serverF1
+      503:
+        body:
+          application/json:
+            type: serverF2
+  get:
+    description: To retrieve the details
+    is:
+      - client-info
+    securedBy:
+      - auth 
+
+/credit:
+  post:
+    body:
+      application/json:
+        type: inpSchema
+     

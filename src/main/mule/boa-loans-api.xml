@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+    <http:listener-config name="boa-loans-api-httpListenerConfig">
+        <http:listener-connection host="localhost" port="8085" />
+    </http:listener-config>
+    <apikit:config name="boa-loans-api-config" api="boa-loans-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="26358ce1-c241-4a08-95a2-aa89df450a92" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<os:config name="loans_ObjectStore_Config" doc:name="ObjectStore Config" doc:id="b32fb3de-9b52-4347-8653-4b782522d6aa" >
+		<os:connection >
+			<reconnection failsDeployment="true">
+				<reconnect />
+			</reconnection>
+		</os:connection>
+	</os:config>
+	<os:object-store name="loans_Object_store" doc:name="Object store" doc:id="7a0779d8-1b37-438c-ac25-751ea7a3a6c2" entryTtl="1000" entryTtlUnit="DAYS" expirationIntervalUnit="DAYS" />
+	<http:request-config name="HTTP_Request_configuration2" doc:name="HTTP Request configuration" doc:id="20ac198c-5e24-406d-a058-050ca53d1035" >
+		<http:request-connection host="localhost" port="8083" />
+	</http:request-config>
+	<flow name="boa-loans-api-main">
+        <http:listener config-ref="boa-loans-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="boa-loans-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="boa-loans-api-console">
+        <http:listener config-ref="boa-loans-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="boa-loans-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\loans:boa-loans-api-config">
+        <logger level="INFO" message="get:\loans:boa-loans-api-config" />
+    </flow>
+    <flow name="post:\credit:application\json:boa-loans-api-config">
+        <logger level="INFO" message="post:\credit:application\json:boa-loans-api-config" />
+    </flow>
+    <flow name="post:\loans:application\json:boa-loans-api-config">
+		<flow-ref doc:name="Flow Reference" doc:id="b6ef368b-0a2f-411a-85dd-a2907221de05" name="boa-loans-apiFlow"/>
+    </flow>
+	<flow name="boa-loans-apiFlow" doc:id="ff3d00c9-68fe-4064-94a8-405af18d9a32" >
+		<ee:transform doc:name="Transform Message" doc:id="86d1d243-3a36-47c2-b9ec-f240ae6ec68b" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="postPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="GET" doc:name="Request" doc:id="9bf4dfcf-7a3f-48c5-951a-46191271505e" config-ref="HTTP_Request_configuration" path="/token" target="token_data">
+			<ee:repeatable-file-store-stream bufferUnit="MB" />
+		</http:request>
+		<set-variable value="#[vars.token_data.token_id]" doc:name="Set Variable" doc:id="0600c22c-9e61-4a65-b3d6-45cdc59c8267" variableName="token_id"/>
+		<http:request method="POST" doc:name="Request" doc:id="e7151f52-c2f1-4192-bce4-149295953ce6" config-ref="HTTP_Request_configuration2" path="/api/credit-score/validate" target="creditScoreData">
+			<http:body ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	cust_id: vars.postPayload.customer_id
+}]]]></http:body>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	Authorization : vars.token_id
+}]]]></http:headers>
+		</http:request>
+		<choice doc:name="Choice" doc:id="d1186f8b-e9bc-4e8b-9bbd-377e70a93725" >
+			<when expression="#[((vars.creditScoreData.credit_score ) as Number) &gt; (700 as Number )]">
+				<ee:transform doc:name="Transform Message" doc:id="c3a51471-0ab6-4bbe-aaf5-6cda7c2b8f90" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="loanApp" ><![CDATA[%dw 2.0
+output application/json
+---
+[vars.postPayload ++ {"loan_id" : vars.postPayload.loan_type ++ "_" ++ uuid()}]]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<os:contains doc:name="Contains" doc:id="8bf7fc9a-27fa-4d5d-9dc5-315c915480b7" config-ref="loans_ObjectStore_Config" key="#[vars.postPayload.customer_id]" objectStore="loans_Object_store" target="kloans"/>
+				<choice doc:name="Choice" doc:id="e2118ac1-acf9-47fc-be10-8b5186c2fc51" >
+					<when expression="#[vars.kloans == true]">
+						<os:retrieve doc:name="Retrieve" doc:id="c86e0d0e-6cdc-4aec-8257-03c729e8d224" config-ref="loans_ObjectStore_Config" key="#[vars.postPayload.customer_id]" target="existingLoans" objectStore="loans_Object_store"/>
+						<ee:transform doc:name="Transform Message" doc:id="9f23d48e-bbed-43c6-b4f1-2b01a44051e2" >
+							<ee:message >
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="updatedLoans" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.loanApp ++ vars.existingLoans]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<os:store doc:name="Store" doc:id="79abe741-4dba-4d2b-9bad-d77324ae8167" config-ref="loans_ObjectStore_Config" key="#[vars.postPayload.customer_id]" objectStore="loans_Object_store">
+							<os:value ><![CDATA[#[vars.updatedLoans]]]></os:value>
+						</os:store>
+					</when>
+					<otherwise >
+						<os:store doc:name="Store" doc:id="2c555de2-4b04-4f21-ac12-39d84ce49f5f" config-ref="loans_ObjectStore_Config" key="#[vars.postPayload.customer_id]" objectStore="loans_Object_store">
+							<os:value ><![CDATA[#[vars.loanApp]]]></os:value>
+						</os:store>
+					</otherwise>
+				</choice>
+				<ee:transform doc:name="Transform Message" doc:id="990d2292-8954-46b2-902e-9630985fed66">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"customer_id": vars.postPayload.customer_id,
+	"loan_id" : vars.loanApp.loan_id,
+	"message": vars.postPayload.loan_type ++ " loan account created successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="2d9458a4-ee66-4244-8eee-65d0cbc4bf13" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"customer_id": vars.postPayload.customer_id,
+	"credit_score": vars.creditScoreData.credit_score,
+	"message": "not eligible"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

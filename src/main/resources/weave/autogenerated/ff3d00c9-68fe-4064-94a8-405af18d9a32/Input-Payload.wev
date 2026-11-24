@@ -1,0 +1,14 @@
+%dw 2.0
+
+type auto_ff3d00c9_68fe_4064_94a8_405af18d9a32_Input_Payload = {
+  customer_id: String, 
+  customer_fname: String, 
+  customer_lname: String, 
+  loan_type: String, 
+  loan_amount: Number, 
+  tenure: Number, 
+  interest: Number, 
+  email?: String, 
+  _?: Any
+}
+
